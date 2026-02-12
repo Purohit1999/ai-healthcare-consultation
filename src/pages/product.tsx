@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useAuth, Protect, PricingTable, UserButton } from '@clerk/nextjs';
 import DatePicker from 'react-datepicker';
 import ReactMarkdown from 'react-markdown';
@@ -17,9 +17,16 @@ function ConsultationForm() {
   const [loading, setLoading] = useState(false);
   const [controller, setController] = useState<AbortController | null>(null);
 
+  // Cleanup: abort any in-flight stream when component unmounts
+  useEffect(() => {
+    return () => controller?.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
+    // Stop any previous stream
     controller?.abort();
     const next = new AbortController();
     setController(next);
@@ -32,7 +39,8 @@ function ConsultationForm() {
       if (!jwt) throw new Error('Authentication required');
       if (!visitDate) throw new Error('Please select a visit date');
 
-      await fetchEventSource('/api', {
+      // ✅ Updated endpoint for AWS (served from same domain/container)
+      await fetchEventSource('/api/consultation', {
         signal: next.signal,
         method: 'POST',
         headers: {
@@ -66,9 +74,15 @@ function ConsultationForm() {
         Consultation Notes
       </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8"
+      >
         <div className="space-y-2">
-          <label htmlFor="patient" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            htmlFor="patient"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Patient Name
           </label>
           <input
@@ -83,7 +97,10 @@ function ConsultationForm() {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            htmlFor="date"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Date of Visit
           </label>
           <DatePicker
@@ -97,7 +114,10 @@ function ConsultationForm() {
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label
+            htmlFor="notes"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
             Consultation Notes
           </label>
           <textarea
